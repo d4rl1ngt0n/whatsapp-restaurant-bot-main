@@ -1,0 +1,139 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Restaurant Admin</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 20px; }
+    h1, h2 { margin: 12px 0; }
+    .row { display: flex; gap: 24px; flex-wrap: wrap; }
+    .card { border: 1px solid #ddd; border-radius: 8px; padding: 16px; flex: 1; min-width: 320px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border-bottom: 1px solid #eee; padding: 8px; text-align: left; }
+    .controls { display: flex; gap: 8px; align-items: center; }
+    input, select, button { padding: 8px; }
+    .pill { padding: 2px 8px; border-radius: 999px; background: #f3f4f6; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <h1>Restaurant Admin</h1>
+  <div class="row">
+    <div class="card">
+      <h2>Analytics</h2>
+      <div id="analytics">Loading…</div>
+    </div>
+    <div class="card">
+      <h2>Filter Orders</h2>
+      <div class="controls">
+        <label>Status
+          <select id="status">
+            <option value="active">Active</option>
+            <option value="completed">Completed</option>
+            <option value="all" selected>All</option>
+          </select>
+        </label>
+        <label>Start <input type="datetime-local" id="start" /></label>
+        <label>End <input type="datetime-local" id="end" /></label>
+        <button onclick="loadOrders()">Load</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="card">
+      <h2>Orders</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Order</th><th>Status</th><th>Total</th><th>Created</th><th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="orders"></tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h2>Menu Availability</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>Name</th><th>Price</th><th>Available</th><th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="menu"></tbody>
+      </table>
+    </div>
+  </div>
+
+<script>
+async function jsonGet(url){ const r = await fetch(url); if(!r.ok) throw new Error('GET '+url); return r.json(); }
+async function jsonPost(url, body){ const r = await fetch(url,{method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)}); if(!r.ok) throw new Error('POST '+url); return r.json(); }
+
+async function loadAnalytics(){
+  try{ const a = await jsonGet('/api/analytics');
+    document.getElementById('analytics').innerHTML = `
+      <div class="row">
+        <div class="card"><div><strong>Orders Today</strong></div><div class="pill">${a.orders_today}</div></div>
+        <div class="card"><div><strong>Revenue Today</strong></div><div class="pill">${a.revenue_today.toFixed ? a.revenue_today.toFixed(2) : a.revenue_today}</div></div>
+        <div class="card"><div><strong>Total Orders</strong></div><div class="pill">${a.total_orders}</div></div>
+        <div class="card"><div><strong>Total Revenue</strong></div><div class="pill">${a.total_revenue.toFixed ? a.total_revenue.toFixed(2) : a.total_revenue}</div></div>
+      </div>`;
+  }catch(e){ document.getElementById('analytics').textContent='Failed to load analytics'; }
+}
+
+async function loadOrders(){
+  const status = document.getElementById('status').value;
+  const start = document.getElementById('start').value; const end = document.getElementById('end').value;
+  let url = `/orders?status=${encodeURIComponent(status)}`;
+  if(start) url += `&start=${encodeURIComponent(new Date(start).toISOString())}`;
+  if(end) url += `&end=${encodeURIComponent(new Date(end).toISOString())}`;
+  try{ const orders = await jsonGet(url);
+    const tbody = document.getElementById('orders'); tbody.innerHTML='';
+    orders.forEach(o=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${o.order_number}</td><td>${o.status}</td><td>${o.total?.toFixed ? o.total.toFixed(2) : o.total}</td><td>${o.created_at}</td>
+      <td>
+        <select id="st_${o.order_number}">
+          <option ${o.status==='pending'?'selected':''} value="pending">pending</option>
+          <option ${o.status==='preparing'?'selected':''} value="preparing">preparing</option>
+          <option ${o.status==='ready'?'selected':''} value="ready">ready</option>
+          <option ${o.status==='completed'?'selected':''} value="completed">completed</option>
+          <option ${o.status==='cancelled'?'selected':''} value="cancelled">cancelled</option>
+        </select>
+        <button onclick="updateStatus('${o.order_number}')">Update</button>
+      </td>`;
+      tbody.appendChild(tr);
+    });
+  }catch(e){ document.getElementById('orders').innerHTML = '<tr><td colspan="5">Failed to load</td></tr>'; }
+}
+
+async function updateStatus(orderNumber){
+  const st = document.getElementById('st_'+orderNumber).value;
+  try{ await jsonPost('/orders/update-status', {order_number: orderNumber, status: st});
+    await loadOrders();
+  }catch(e){ alert('Failed to update status'); }
+}
+
+async function loadMenu(){
+  try{ const items = await jsonGet('/menu');
+    const tbody = document.getElementById('menu'); tbody.innerHTML='';
+    items.forEach(m => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${m.number}</td><td>${m.name}</td><td>${m.price?.toFixed ? m.price.toFixed(2): m.price}</td>
+      <td>${m.available ? 'Yes':'No'}</td>
+      <td><button onclick="toggleAvail(${m.number}, ${!m.available})">Set ${m.available?'Unavailable':'Available'}</button></td>`;
+      tbody.appendChild(tr);
+    });
+  }catch(e){ document.getElementById('menu').innerHTML = '<tr><td colspan="5">Failed to load</td></tr>'; }
+}
+
+async function toggleAvail(number, available){
+  try { await jsonPost('/menu/update-availability', {number, available});
+    await loadMenu();
+  }catch(e){ alert('Failed to update'); }
+}
+
+(function init(){ loadAnalytics(); loadOrders(); loadMenu(); })();
+</script>
+</body>
+</html>
