@@ -1,0 +1,896 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ organization.brand_name or organization.name }} - Admin Dashboard</title>
+  <style>
+    :root {
+      --primary-color: {{ organization.primary_color or '#2563eb' }};
+      --secondary-color: {{ organization.secondary_color or '#64748b' }};
+      --success-color: #059669;
+      --warning-color: #d97706;
+      --error-color: #dc2626;
+    }
+    
+    body { 
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; 
+      margin: 0; 
+      background-color: #f8fafc;
+    }
+    
+    .header {
+      background: var(--primary-color);
+      color: white;
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .header h1 {
+      margin: 0;
+      font-size: 1.5rem;
+    }
+    
+    .header .tenant-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    
+    .header .logo {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      background: white;
+      color: var(--primary-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    
+    .nav-tabs {
+      display: flex;
+      gap: 1px;
+      background: #e2e8f0;
+      border-radius: 8px;
+      padding: 4px;
+      margin-bottom: 2rem;
+    }
+    
+    .nav-tab {
+      padding: 0.75rem 1.5rem;
+      background: transparent;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    
+    .nav-tab.active {
+      background: white;
+      color: var(--primary-color);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .stat-card h3 {
+      margin: 0 0 0.5rem 0;
+      font-size: 0.875rem;
+      color: var(--secondary-color);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .stat-card .value {
+      font-size: 2rem;
+      font-weight: bold;
+      color: var(--primary-color);
+    }
+    
+    .card {
+      background: white;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      margin-bottom: 1.5rem;
+    }
+    
+    .card-header {
+      padding: 1.5rem;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .card-content {
+      padding: 1.5rem;
+    }
+    
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+    }
+    
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      color: #374151;
+    }
+    
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      transition: border-color 0.2s;
+    }
+    
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    
+    .btn {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 6px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .btn-primary {
+      background: var(--primary-color);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: #1d4ed8;
+    }
+    
+    .btn-secondary {
+      background: #6b7280;
+      color: white;
+    }
+    
+    .btn-success {
+      background: var(--success-color);
+      color: white;
+    }
+    
+    .btn-warning {
+      background: var(--warning-color);
+      color: white;
+    }
+    
+    .btn-danger {
+      background: var(--error-color);
+      color: white;
+    }
+    
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    
+    .table th,
+    .table td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    
+    .table th {
+      font-weight: 600;
+      color: #374151;
+      background: #f8fafc;
+    }
+    
+    .badge {
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    
+    .badge-success {
+      background: #dcfce7;
+      color: #166534;
+    }
+    
+    .badge-warning {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    
+    .badge-error {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+    
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+    
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 24px;
+    }
+    
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+    
+    input:checked + .slider {
+      background-color: var(--primary-color);
+    }
+    
+    input:checked + .slider:before {
+      transform: translateX(20px);
+    }
+    
+    .color-picker {
+      width: 50px !important;
+      height: 40px !important;
+      padding: 0 !important;
+      border: none !important;
+      cursor: pointer;
+    }
+    
+    .tenant-selector {
+      margin-bottom: 2rem;
+    }
+    
+    .tenant-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    
+    .tenant-card {
+      background: white;
+      border: 2px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .tenant-card:hover {
+      border-color: var(--primary-color);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .tenant-card.active {
+      border-color: var(--primary-color);
+      background: #eff6ff;
+    }
+    
+    .notification {
+      padding: 1rem;
+      border-radius: 6px;
+      margin-bottom: 1rem;
+      display: none;
+    }
+    
+    .notification.success {
+      background: #dcfce7;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+    }
+    
+    .notification.error {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div style="display: flex; align-items: center; gap: 1rem;">
+      {% if organization.logo_url %}
+        <img src="{{ organization.logo_url }}" alt="Logo" class="logo">
+      {% else %}
+        <div class="logo">{{ organization.name[0] }}</div>
+      {% endif %}
+      <h1>{{ organization.brand_name or organization.name }}</h1>
+    </div>
+    
+    <div class="tenant-info">
+      <select id="tenantSelector" class="form-control" onchange="switchTenant()">
+        {% for tenant in tenants %}
+          <option value="{{ tenant.id }}" {% if tenant.id == current_tenant.id %}selected{% endif %}>
+            {{ tenant.name }}
+          </option>
+        {% endfor %}
+      </select>
+      <span>{{ current_user.name or current_user.email }}</span>
+    </div>
+  </div>
+
+  <div class="container">
+    <div id="notification" class="notification"></div>
+    
+    <div class="nav-tabs">
+      <button class="nav-tab active" onclick="showTab('dashboard')">Dashboard</button>
+      <button class="nav-tab" onclick="showTab('orders')">Orders</button>
+      <button class="nav-tab" onclick="showTab('menu')">Menu</button>
+      <button class="nav-tab" onclick="showTab('customers')">Customers</button>
+      <button class="nav-tab" onclick="showTab('settings')">Settings</button>
+      <button class="nav-tab" onclick="showTab('branding')">Branding</button>
+      {% if current_user.role in ['super_admin', 'tenant_admin'] %}
+      <button class="nav-tab" onclick="showTab('organization')">Organization</button>
+      {% endif %}
+    </div>
+
+    <!-- Dashboard Tab -->
+    <div id="dashboard" class="tab-content active">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <h3>Today's Orders</h3>
+          <div class="value" id="ordersToday">-</div>
+        </div>
+        <div class="stat-card">
+          <h3>Today's Revenue</h3>
+          <div class="value" id="revenueToday">-</div>
+        </div>
+        <div class="stat-card">
+          <h3>Total Customers</h3>
+          <div class="value" id="totalCustomers">-</div>
+        </div>
+        <div class="stat-card">
+          <h3>Menu Items</h3>
+          <div class="value" id="menuItems">-</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h2>Recent Orders</h2>
+          <button class="btn btn-primary" onclick="refreshOrders()">Refresh</button>
+        </div>
+        <div class="card-content">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Order #</th>
+                <th>Customer</th>
+                <th>Status</th>
+                <th>Total</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="recentOrders">
+              <tr><td colspan="6">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Orders Tab -->
+    <div id="orders" class="tab-content">
+      <div class="card">
+        <div class="card-header">
+          <h2>Order Management</h2>
+          <div>
+            <select id="orderStatus" onchange="filterOrders()">
+              <option value="active">Active Orders</option>
+              <option value="completed">Completed</option>
+              <option value="all">All Orders</option>
+            </select>
+            <button class="btn btn-primary" onclick="refreshOrders()">Refresh</button>
+          </div>
+        </div>
+        <div class="card-content">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Order #</th>
+                <th>Customer</th>
+                <th>Items</th>
+                <th>Status</th>
+                <th>Type</th>
+                <th>Total</th>
+                <th>Created</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="ordersList">
+              <tr><td colspan="8">Loading orders...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Menu Tab -->
+    <div id="menu" class="tab-content">
+      <div class="card">
+        <div class="card-header">
+          <h2>Menu Management</h2>
+          <button class="btn btn-primary" onclick="showAddMenuItem()">Add Item</button>
+        </div>
+        <div class="card-content">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Name</th>
+                <th>Category</th>
+                <th>Price</th>
+                <th>Available</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="menuList">
+              <tr><td colspan="6">Loading menu...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Customers Tab -->
+    <div id="customers" class="tab-content">
+      <div class="card">
+        <div class="card-header">
+          <h2>Customer Management</h2>
+          <button class="btn btn-primary" onclick="exportCustomers()">Export</button>
+        </div>
+        <div class="card-content">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Phone</th>
+                <th>Orders</th>
+                <th>Total Spent</th>
+                <th>Last Order</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="customersList">
+              <tr><td colspan="6">Loading customers...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Tab -->
+    <div id="settings" class="tab-content">
+      <div class="card">
+        <div class="card-header">
+          <h2>Restaurant Settings</h2>
+          <button class="btn btn-success" onclick="saveSettings()">Save Changes</button>
+        </div>
+        <div class="card-content">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Restaurant Name</label>
+              <input type="text" id="restaurantName" value="{{ current_tenant.name }}">
+            </div>
+            <div class="form-group">
+              <label>Phone Number</label>
+              <input type="tel" id="restaurantPhone" value="{{ current_tenant.phone or '' }}">
+            </div>
+            <div class="form-group">
+              <label>Email</label>
+              <input type="email" id="restaurantEmail" value="{{ current_tenant.email or '' }}">
+            </div>
+            <div class="form-group">
+              <label>Currency</label>
+              <select id="currency">
+                <option value="USD" {% if current_tenant.currency == 'USD' %}selected{% endif %}>USD ($)</option>
+                <option value="EUR" {% if current_tenant.currency == 'EUR' %}selected{% endif %}>EUR (€)</option>
+                <option value="GBP" {% if current_tenant.currency == 'GBP' %}selected{% endif %}>GBP (£)</option>
+                <option value="NGN" {% if current_tenant.currency == 'NGN' %}selected{% endif %}>NGN (₦)</option>
+                <option value="GHS" {% if current_tenant.currency == 'GHS' %}selected{% endif %}>GHS (GH₵)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Language</label>
+              <select id="language">
+                <option value="en" {% if current_tenant.language == 'en' %}selected{% endif %}>English</option>
+                <option value="es" {% if current_tenant.language == 'es' %}selected{% endif %}>Spanish</option>
+                <option value="fr" {% if current_tenant.language == 'fr' %}selected{% endif %}>French</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Timezone</label>
+              <select id="timezone">
+                <option value="UTC" {% if current_tenant.timezone == 'UTC' %}selected{% endif %}>UTC</option>
+                <option value="America/New_York" {% if current_tenant.timezone == 'America/New_York' %}selected{% endif %}>Eastern Time</option>
+                <option value="America/Los_Angeles" {% if current_tenant.timezone == 'America/Los_Angeles' %}selected{% endif %}>Pacific Time</option>
+                <option value="Europe/London" {% if current_tenant.timezone == 'Europe/London' %}selected{% endif %}>London</option>
+              </select>
+            </div>
+          </div>
+
+          <h3>Feature Settings</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="switch">
+                <input type="checkbox" id="enableDelivery" {% if tenant_config.enable_delivery %}checked{% endif %}>
+                <span class="slider"></span>
+              </label>
+              <label for="enableDelivery">Enable Delivery</label>
+            </div>
+            <div class="form-group">
+              <label class="switch">
+                <input type="checkbox" id="enablePickup" {% if tenant_config.enable_pickup %}checked{% endif %}>
+                <span class="slider"></span>
+              </label>
+              <label for="enablePickup">Enable Pickup</label>
+            </div>
+            <div class="form-group">
+              <label class="switch">
+                <input type="checkbox" id="enableAI" {% if tenant_config.enable_ai_recommendations %}checked{% endif %}>
+                <span class="slider"></span>
+              </label>
+              <label for="enableAI">AI Recommendations</label>
+            </div>
+            <div class="form-group">
+              <label>Minimum Order Amount</label>
+              <input type="number" id="minOrderAmount" step="0.01" value="{{ tenant_config.min_order_amount }}">
+            </div>
+            <div class="form-group">
+              <label>Delivery Fee</label>
+              <input type="number" id="deliveryFee" step="0.01" value="{{ tenant_config.delivery_fee }}">
+            </div>
+            <div class="form-group">
+              <label>Tax Rate (%)</label>
+              <input type="number" id="taxRate" step="0.01" value="{{ tenant_config.tax_rate * 100 }}">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Branding Tab -->
+    <div id="branding" class="tab-content">
+      <div class="card">
+        <div class="card-header">
+          <h2>Brand Customization</h2>
+          <button class="btn btn-success" onclick="saveBranding()">Save Branding</button>
+        </div>
+        <div class="card-content">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Brand Name</label>
+              <input type="text" id="brandName" value="{{ organization.brand_name or '' }}">
+            </div>
+            <div class="form-group">
+              <label>Logo URL</label>
+              <input type="url" id="logoUrl" value="{{ organization.logo_url or '' }}">
+            </div>
+            <div class="form-group">
+              <label>Primary Color</label>
+              <input type="color" id="primaryColor" class="color-picker" value="{{ organization.primary_color or '#2563eb' }}">
+            </div>
+            <div class="form-group">
+              <label>Secondary Color</label>
+              <input type="color" id="secondaryColor" class="color-picker" value="{{ organization.secondary_color or '#64748b' }}">
+            </div>
+            <div class="form-group">
+              <label>Custom Domain</label>
+              <input type="text" id="customDomain" value="{{ organization.custom_domain or '' }}" placeholder="restaurant.com">
+            </div>
+          </div>
+
+          <h3>WhatsApp Message Templates</h3>
+          <div class="form-group">
+            <label>Welcome Message</label>
+            <textarea id="welcomeMessage" rows="4">{{ tenant_config.welcome_message or 'Welcome to ' + current_tenant.name + '! How can we help you today?' }}</textarea>
+          </div>
+          <div class="form-group">
+            <label>Order Confirmation Template</label>
+            <textarea id="orderConfirmationTemplate" rows="4">{{ tenant_config.order_confirmation_template or 'Thank you for your order! We\'ll notify you when it\'s ready.' }}</textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Organization Tab -->
+    {% if current_user.role in ['super_admin', 'tenant_admin'] %}
+    <div id="organization" class="tab-content">
+      <div class="card">
+        <div class="card-header">
+          <h2>Organization Management</h2>
+          <button class="btn btn-primary" onclick="addTenant()">Add Location</button>
+        </div>
+        <div class="card-content">
+          <div class="tenant-grid" id="tenantGrid">
+            {% for tenant in tenants %}
+            <div class="tenant-card {% if tenant.id == current_tenant.id %}active{% endif %}" onclick="selectTenant({{ tenant.id }})">
+              <h3>{{ tenant.name }}</h3>
+              <p>{{ tenant.city or 'No location set' }}</p>
+              <span class="badge {% if tenant.is_active %}badge-success{% else %}badge-error{% endif %}">
+                {% if tenant.is_active %}Active{% else %}Inactive{% endif %}
+              </span>
+            </div>
+            {% endfor %}
+          </div>
+
+          <h3>Organization Settings</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Organization Name</label>
+              <input type="text" id="orgName" value="{{ organization.name }}">
+            </div>
+            <div class="form-group">
+              <label>Plan</label>
+              <select id="orgPlan">
+                <option value="basic" {% if organization.plan == 'basic' %}selected{% endif %}>Basic</option>
+                <option value="professional" {% if organization.plan == 'professional' %}selected{% endif %}>Professional</option>
+                <option value="enterprise" {% if organization.plan == 'enterprise' %}selected{% endif %}>Enterprise</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Contact Email</label>
+              <input type="email" id="orgEmail" value="{{ organization.contact_email }}">
+            </div>
+            <div class="form-group">
+              <label>Max Locations</label>
+              <input type="number" id="maxLocations" value="{{ organization.max_locations }}">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <script>
+    let currentTenant = {{ current_tenant.id }};
+    
+    function showTab(tabName) {
+      // Hide all tabs
+      document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+      });
+      document.querySelectorAll('.nav-tab').forEach(tab => {
+        tab.classList.remove('active');
+      });
+      
+      // Show selected tab
+      document.getElementById(tabName).classList.add('active');
+      event.target.classList.add('active');
+      
+      // Load tab-specific data
+      if (tabName === 'dashboard') {
+        loadDashboard();
+      } else if (tabName === 'orders') {
+        loadOrders();
+      } else if (tabName === 'menu') {
+        loadMenu();
+      } else if (tabName === 'customers') {
+        loadCustomers();
+      }
+    }
+    
+    function showNotification(message, type = 'success') {
+      const notification = document.getElementById('notification');
+      notification.textContent = message;
+      notification.className = `notification ${type}`;
+      notification.style.display = 'block';
+      
+      setTimeout(() => {
+        notification.style.display = 'none';
+      }, 5000);
+    }
+    
+    function switchTenant() {
+      const tenantId = document.getElementById('tenantSelector').value;
+      if (tenantId !== currentTenant.toString()) {
+        window.location.href = `?tenant_id=${tenantId}`;
+      }
+    }
+    
+    async function loadDashboard() {
+      try {
+        const response = await fetch(`/api/analytics?tenant_id=${currentTenant}`);
+        const data = await response.json();
+        
+        document.getElementById('ordersToday').textContent = data.orders_today || 0;
+        document.getElementById('revenueToday').textContent = `$${(data.revenue_today || 0).toFixed(2)}`;
+        document.getElementById('totalCustomers').textContent = data.total_customers || 0;
+        document.getElementById('menuItems').textContent = data.total_menu_items || 0;
+        
+        loadRecentOrders();
+      } catch (error) {
+        console.error('Failed to load dashboard:', error);
+      }
+    }
+    
+    async function loadRecentOrders() {
+      try {
+        const response = await fetch(`/orders?status=active&tenant_id=${currentTenant}`);
+        const orders = await response.json();
+        
+        const tbody = document.getElementById('recentOrders');
+        tbody.innerHTML = orders.slice(0, 10).map(order => `
+          <tr>
+            <td>${order.order_number}</td>
+            <td>${order.customer_name || 'N/A'}</td>
+            <td><span class="badge badge-${order.status === 'preparing' ? 'warning' : 'success'}">${order.status}</span></td>
+            <td>$${order.total.toFixed(2)}</td>
+            <td>${new Date(order.created_at).toLocaleDateString()}</td>
+            <td>
+              <button class="btn btn-primary" onclick="updateOrderStatus('${order.order_number}', 'ready')">Mark Ready</button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (error) {
+        console.error('Failed to load orders:', error);
+      }
+    }
+    
+    async function updateOrderStatus(orderNumber, status) {
+      try {
+        const response = await fetch('/orders/update-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ order_number: orderNumber, status: status })
+        });
+        
+        if (response.ok) {
+          showNotification(`Order ${orderNumber} updated to ${status}`);
+          loadRecentOrders();
+        } else {
+          showNotification('Failed to update order', 'error');
+        }
+      } catch (error) {
+        showNotification('Failed to update order', 'error');
+      }
+    }
+    
+    async function saveSettings() {
+      const settings = {
+        name: document.getElementById('restaurantName').value,
+        phone: document.getElementById('restaurantPhone').value,
+        email: document.getElementById('restaurantEmail').value,
+        currency: document.getElementById('currency').value,
+        language: document.getElementById('language').value,
+        timezone: document.getElementById('timezone').value,
+        enable_delivery: document.getElementById('enableDelivery').checked,
+        enable_pickup: document.getElementById('enablePickup').checked,
+        enable_ai_recommendations: document.getElementById('enableAI').checked,
+        min_order_amount: parseFloat(document.getElementById('minOrderAmount').value),
+        delivery_fee: parseFloat(document.getElementById('deliveryFee').value),
+        tax_rate: parseFloat(document.getElementById('taxRate').value) / 100
+      };
+      
+      try {
+        const response = await fetch(`/api/tenant/${currentTenant}/settings`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(settings)
+        });
+        
+        if (response.ok) {
+          showNotification('Settings saved successfully!');
+        } else {
+          showNotification('Failed to save settings', 'error');
+        }
+      } catch (error) {
+        showNotification('Failed to save settings', 'error');
+      }
+    }
+    
+    async function saveBranding() {
+      const branding = {
+        brand_name: document.getElementById('brandName').value,
+        logo_url: document.getElementById('logoUrl').value,
+        primary_color: document.getElementById('primaryColor').value,
+        secondary_color: document.getElementById('secondaryColor').value,
+        custom_domain: document.getElementById('customDomain').value,
+        welcome_message: document.getElementById('welcomeMessage').value,
+        order_confirmation_template: document.getElementById('orderConfirmationTemplate').value
+      };
+      
+      try {
+        const response = await fetch(`/api/organization/branding`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(branding)
+        });
+        
+        if (response.ok) {
+          showNotification('Branding saved successfully!');
+          // Update CSS variables
+          document.documentElement.style.setProperty('--primary-color', branding.primary_color);
+          document.documentElement.style.setProperty('--secondary-color', branding.secondary_color);
+        } else {
+          showNotification('Failed to save branding', 'error');
+        }
+      } catch (error) {
+        showNotification('Failed to save branding', 'error');
+      }
+    }
+    
+    // Load dashboard on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      loadDashboard();
+    });
+  </script>
+</body>
+</html>
